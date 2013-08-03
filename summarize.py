@@ -70,8 +70,11 @@ def summarize_page(url):
     import bs4
     import re
     import requests
+    from tidylib import tidy_document
 
-    html = bs4.BeautifulSoup(requests.get(url).text)
+    html = requests.get(url).text
+    html, errors = tidy_document(html, options={'numeric-entities':1})
+    html = bs4.BeautifulSoup(html)
     b = find_likely_body(html)
     summaries = map(lambda p: re.sub('\s+', ' ', summarize_block(p.text)).strip(), b.find_all('p'))
     summaries = sorted(set(summaries), key=summaries.index) #dedpulicate and preserve order
