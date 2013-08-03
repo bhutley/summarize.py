@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-
 import itertools
 import nltk
 from nltk.corpus import stopwords
 import string
+
 
 stop_words = stopwords.words('english')
 
@@ -80,4 +80,9 @@ def summarize_page(url):
 
 if __name__ == '__main__':
     import sys
+
+    if len(sys.argv) < 2:
+        print("Usage: %s <http://site/article.html>" % (sys.argv[0], ))
+        exit(0)
+
     print summarize_page(sys.argv[1])
