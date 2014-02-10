@@ -3,6 +3,8 @@ import itertools
 import nltk
 from nltk.corpus import stopwords
 import string
+import os
+import re
 
 
 stop_words = stopwords.words('english')
@@ -68,13 +70,28 @@ class Summary(object):
         summaries = [ s.encode('ascii', 'ignore') for s in self.summaries ]
         return "{0} - {1}\n\n{2}".format(self.title, self.url, '\n'.join(summaries))
 
-def summarize_page(url):
-    import bs4
-    import re
-    import requests
-    from tidylib import tidy_document
+def summarize_text(text):
+    # Here I assume paragraphs are delimited by blank lines
+    # I am also assuming that lines are ended with a new line.
+    paras = []
+    para = []
+    for line in text.split("\n"):
+        line = line.strip()
+        if len(line) == 0:
+            if len(para) > 0:
+                paras.append(re.sub('\s+', ' ', ' '.join(para)))
+                para = []
+        else:
+            para.append(line)
+    if len(para) > 0:
+        paras.append(re.sub('\s+', ' ', ' '.join(para)))
 
-    html = requests.get(url).text
+    summaries = [ summarize_block(p) for p in paras ]
+    return Summary(None, text, None, summaries)
+
+def summarize_html(html, url = None):
+    import bs4
+    from tidylib import tidy_document
     html, errors = tidy_document(html, options={'numeric-entities':1})
     html = bs4.BeautifulSoup(html)
     b = find_likely_body(html)
@@ -83,6 +100,12 @@ def summarize_page(url):
     summaries = [ re.sub('\s+', ' ', summary.strip()) for summary in summaries if filter(lambda c: c.lower() in string.letters, summary) ]
     return Summary(url, b, html.title.text if html.title else None, summaries)
 
+def summarize_url(url):
+    import requests
+
+    html = requests.get(url).text
+    return summarize_html(html, url)
+
 if __name__ == '__main__':
     import sys
 
@@ -90,4 +113,11 @@ if __name__ == '__main__':
         print("Usage: %s <http://site/article.html>" % (sys.argv[0], ))
         exit(0)
 
-    print summarize_page(sys.argv[1])
+    filename_or_url = sys.argv[1]
+
+    if filename_or_url.startswith('http'):
+        print summarize_url(filename_or_url)
+    elif os.path.isfile(filename_or_url):
+        with open(filename_or_url, 'r') as f:
+            print summarize_text(f.read())
+
