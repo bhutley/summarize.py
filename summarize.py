@@ -6,6 +6,7 @@ import string
 import os
 import re
 
+DEFAULT_UNICODE_ENCODING = "windows-1252"
 
 stop_words = stopwords.words('english')
 
@@ -67,7 +68,15 @@ class Summary(object):
 
     def __str__(self):
         # Make sure we convert unconvertable unicode to ascii
-        summaries = [ s.encode('ascii', 'ignore') for s in self.summaries ]
+        summaries = []
+        for i in range(0, len(self.summaries)):
+            try:
+                sumdec = self.summaries[i].decode(DEFAULT_UNICODE_ENCODING)
+                s = sumdec.encode('ascii', 'ignore')
+                summaries.append(s)
+            except Exception as e:
+                print("Caught exception converting summary %s to ascii: %s" % (self.summaries[i], e, ))
+        #summaries = [ s.encode('ascii', 'ignore') for s in self.summaries ]
         return "{0} - {1}\n\n{2}".format(self.title, self.url, '\n'.join(summaries))
 
 def summarize_text(text):
@@ -110,7 +119,7 @@ if __name__ == '__main__':
     import sys
 
     if len(sys.argv) < 2:
-        print("Usage: %s <http://site/article.html>" % (sys.argv[0], ))
+        print("Usage: %s <http://site/article.html or filename.txt>" % (sys.argv[0], ))
         exit(0)
 
     filename_or_url = sys.argv[1]
@@ -120,4 +129,6 @@ if __name__ == '__main__':
     elif os.path.isfile(filename_or_url):
         with open(filename_or_url, 'r') as f:
             print summarize_text(f.read())
+    else:
+        print("%s must be a file or web url" % (filename_or_url, ))
 
